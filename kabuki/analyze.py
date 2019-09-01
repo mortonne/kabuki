@@ -1,19 +1,18 @@
-
-import sys, os
+import os
+import sys
+from collections import OrderedDict
 from types import FunctionType
 
-import numpy as np
-from matplotlib.pylab import figure
 import matplotlib.pyplot as plt
-
+import numpy as np
 import pandas as pd
 import pymc as pm
 import pymc.progressbar as pbar
-from . import utils
+from matplotlib.pylab import figure
 
+from . import utils
 from .utils import interpolate_trace
 
-from collections import OrderedDict
 
 def plot_posterior_nodes(nodes, bins=50, lb=None, ub=None):
     """Plot interpolated posterior of a list of nodes.
@@ -39,7 +38,7 @@ def plot_posterior_nodes(nodes, bins=50, lb=None, ub=None):
 
     for node in nodes:
         trace = node.trace()[:]
-        #hist = interpolate_trace(x_data, trace, range=(trace.min(), trace.max()), bins=bins)
+        # hist = interpolate_trace(x_data, trace, range=(trace.min(), trace.max()), bins=bins)
         hist = interpolate_trace(x_data, trace, range=(lb, ub), bins=bins)
         plt.plot(x_data, hist, label=node.__name__, lw=2.)
 
@@ -69,7 +68,7 @@ def group_plot(model, params_to_plot=(), bins=50, samples=5000, save_to=None):
         min, max = find_min_max(subj_block)
 
         # plot interpolated subject histograms
-        #create figure
+        # create figure
         print("plotting %s: %s" % (knode_name, tag))
         sys.stdout.flush()
 
@@ -95,14 +94,14 @@ def group_plot(model, params_to_plot=(), bins=50, samples=5000, save_to=None):
                 parent.value = parent.trace()[trace_pos]
             group_trace[sample] = node.random()
             # TODO: What to do in case of deterministic (e.g. transform) node
-            #except AttributeError:
+            # except AttributeError:
             #    group_trace[sample] = node.parents.items()[0].random()
 
         height = interpolate_trace(x, group_trace, range=(min, max), bins=bins)
         plt.plot(x, height, '--', lw=2., label='group')
 
         ##########################################
-        #legend and title
+        # legend and title
         leg = plt.legend(loc='best', fancybox=True)
         leg.get_frame().set_alpha(0.5)
         plt.gcf().canvas.set_window_title(knode_name)
@@ -111,16 +110,17 @@ def group_plot(model, params_to_plot=(), bins=50, samples=5000, save_to=None):
             plt.savefig(os.path.join(save_to, "group_%s.png" % knode_name))
             plt.savefig(os.path.join(save_to, "group_%s.pdf" % knode_name))
 
+
 def plot_all_pairwise(model):
     """Plot all pairwise posteriors to find correlations."""
     import scipy as sp
     from itertools import combinations
-    #size = int(np.ceil(np.sqrt(len(data_deps))))
+    # size = int(np.ceil(np.sqrt(len(data_deps))))
     fig = plt.figure()
     fig.subplots_adjust(wspace=0.4, hspace=0.4)
     # Loop through all pairwise combinations
     for i, (p0, p1) in enumerate(combinations(model.get_group_nodes()['node'], 2)):
-        fig.add_subplot(6,6,i+1)
+        fig.add_subplot(6, 6, i + 1)
         plt.plot(p0.trace(), p1.trace(), '.')
         (a_s, b_s, r, tt, stderr) = sp.stats.linregress(p0.trace(), p1.trace())
         reg = sp.polyval((a_s, b_s), (np.min(p0.trace()), np.max(p0.trace())))
@@ -129,6 +129,7 @@ def plot_all_pairwise(model):
         plt.ylabel(p1.__name__)
 
     plt.draw()
+
 
 def gelman_rubin(models):
     """
@@ -144,20 +145,22 @@ def gelman_rubin(models):
     for name, stochastic in stochastics.iterrows():
         # Calculate mean for each chain
         samples = np.empty((num_chains, num_samples))
-        for i,model in enumerate(models):
-            samples[i,:] = model.nodes_db.ix[name, 'node'].trace()
+        for i, model in enumerate(models):
+            samples[i, :] = model.nodes_db.ix[name, 'node'].trace()
 
         R_hat_dict[name] = pm.diagnostics.gelman_rubin(samples)
 
     return R_hat_dict
 
+
 R_hat = gelman_rubin
+
 
 def check_geweke(model, assert_=True):
     # Test for convergence using geweke method
     for name, param in model.iter_stochastics():
         geweke = np.array(pm.geweke(param['node']))
-        if np.any(np.abs(geweke[:,1]) > 2):
+        if np.any(np.abs(geweke[:, 1]) > 2):
             msg = "Chain of %s not properly converged" % param
             if assert_:
                 raise AssertionError(msg)
@@ -166,6 +169,7 @@ def check_geweke(model, assert_=True):
             return False
 
     return True
+
 
 def group_cond_diff(hm, node, cond1, cond2, threshold=0):
     """
@@ -195,27 +199,28 @@ def group_cond_diff(hm, node, cond1, cond2, threshold=0):
     node_dict = hm.params_include[name].subj_nodes
     n_subjs = hm._num_subjs
 
-    #loop over subjs
+    # loop over subjs
     subj_diff_mean = np.zeros(n_subjs)
     subj_diff_std = np.zeros(n_subjs)
     for i_subj in range(n_subjs):
-        #compute difference of traces
+        # compute difference of traces
         name1 = node_dict[cond1][i_subj].__name__
         name2 = node_dict[cond2][i_subj].__name__
         trace1 = hm.mc.db.trace(name1)[:]
         trace2 = hm.mc.db.trace(name2)[:]
         diff_trace = trace1 - trace2
 
-        #compute stats
+        # compute stats
         subj_diff_mean[i_subj] = np.mean(diff_trace)
-        subj_diff_std[i_subj]= np.std(diff_trace)
+        subj_diff_std[i_subj] = np.std(diff_trace)
 
-    pooled_var = 1. / sum(1. / (subj_diff_std**2))
-    pooled_mean = sum(subj_diff_mean / (subj_diff_std**2)) * pooled_var
+    pooled_var = 1. / sum(1. / (subj_diff_std ** 2))
+    pooled_mean = sum(subj_diff_mean / (subj_diff_std ** 2)) * pooled_var
 
-    mass_under = sp.stats.norm.cdf(threshold,pooled_mean, np.sqrt(pooled_var))
+    mass_under = sp.stats.norm.cdf(threshold, pooled_mean, np.sqrt(pooled_var))
 
     return pooled_mean, pooled_var, mass_under
+
 
 def post_pred_compare_stats(sampled_stats, data_stats, evals=None):
     """Evaluate summary statistics of sampled sets.
@@ -236,14 +241,14 @@ def post_pred_compare_stats(sampled_stats, data_stats, evals=None):
         # Generate some default evals
         evals = OrderedDict()
         evals['observed'] = lambda x, y: y
-        evals['mean'] = lambda x,y: np.mean(x)
-        evals['std'] = lambda x,y: np.std(x)
-        evals['SEM'] = lambda x, y: (np.mean(x) - y)**2
-        evals['MSE'] = lambda x, y: np.mean((x - y)**2)
+        evals['mean'] = lambda x, y: np.mean(x)
+        evals['std'] = lambda x, y: np.std(x)
+        evals['SEM'] = lambda x, y: (np.mean(x) - y) ** 2
+        evals['MSE'] = lambda x, y: np.mean((x - y) ** 2)
         evals['credible'] = lambda x, y: (scoreatpercentile(x, 97.5) > y) and (scoreatpercentile(x, 2.5) < y)
         evals['quantile'] = percentileofscore
-        evals['mahalanobis'] = lambda x, y: np.abs(np.mean(x) - y)/np.std(x)
-        #for q in [2.5, 25, 50, 75, 97.5]:
+        evals['mahalanobis'] = lambda x, y: np.abs(np.mean(x) - y) / np.std(x)
+        # for q in [2.5, 25, 50, 75, 97.5]:
         #    key = str(q) + 'q'
         #    evals[key] = lambda x, y, q=q: scoreatpercentile(x, q)
 
@@ -253,13 +258,13 @@ def post_pred_compare_stats(sampled_stats, data_stats, evals=None):
 
     results.index.names = ['stat']
     for stat_name in sampled_stats:
-        #update NaN column with the no. of NaNs and remove them
+        # update NaN column with the no. of NaNs and remove them
         s = sampled_stats[stat_name]
         results.ix[stat_name, 'NaN'] = sum(pd.isnull(s))
         s = s[np.isfinite(s)]
         if len(s) == 0:
             continue
-        #evaluate
+        # evaluate
         for eval_name, func in evals.items():
             value = func(s, data_stats[stat_name])
             results.ix[stat_name, eval_name] = value
@@ -282,6 +287,7 @@ def _post_pred_generate(bottom_node, samples=500, data=None, append_data=False):
         datasets.append(sampled_data)
 
     return datasets
+
 
 def post_pred_gen(model, groupby=None, samples=500, append_data=False, progress_bar=True):
     """Run posterior predictive check on a model.
@@ -333,7 +339,7 @@ def post_pred_gen(model, groupby=None, samples=500, append_data=False, progress_
             bar.update(bar_iter)
 
         if node is None or not hasattr(node, 'random'):
-            continue # Skip
+            continue  # Skip
 
         ##############################
         # Sample and generate stats
@@ -419,7 +425,7 @@ def post_pred_stats(data, sim_datasets, stats=None, plot=False, bins=100, evals=
 def _parents_to_random_posterior_sample(bottom_node, pos=None):
     """Walks through parents and sets them to pos sample."""
     for i, parent in enumerate(bottom_node.extended_parents):
-        if not isinstance(parent, pm.Node): # Skip non-stochastic nodes
+        if not isinstance(parent, pm.Node):  # Skip non-stochastic nodes
             continue
 
         if pos is None:
@@ -460,18 +466,19 @@ def _plot_posterior_pdf_node(bottom_node, axis, value_range=None, samples=10, bi
     for sample in range(samples):
         _parents_to_random_posterior_sample(bottom_node)
         # Generate likelihood for parents parameters
-        like[sample,:] = bottom_node.pdf(value_range)
+        like[sample, :] = bottom_node.pdf(value_range)
 
     y = like.mean(axis=0)
     try:
         y_std = like.std(axis=0)
     except FloatingPointError:
-        print("WARNING! %s threw FloatingPointError over std computation. Setting to 0 and continuing." % bottom_node.__name__)
+        print(
+            "WARNING! %s threw FloatingPointError over std computation. Setting to 0 and continuing." % bottom_node.__name__)
         y_std = np.zeros_like(y)
 
     # Plot pp
     axis.plot(value_range, y, label='post pred', color='b')
-    axis.fill_between(value_range, y-y_std, y+y_std, color='b', alpha=.8)
+    axis.fill_between(value_range, y - y_std, y + y_std, color='b', alpha=.8)
 
     # Plot data
     if len(bottom_node.value) != 0:
@@ -479,10 +486,11 @@ def _plot_posterior_pdf_node(bottom_node, axis, value_range=None, samples=10, bi
                   range=(value_range[0], value_range[-1]), label='data',
                   bins=bins, histtype='step', lw=2.)
 
-    axis.set_ylim(bottom=0) # Likelihood and histogram can only be positive
+    axis.set_ylim(bottom=0)  # Likelihood and histogram can only be positive
+
 
 def plot_posterior_predictive(model, plot_func=None, required_method='pdf', columns=None, save=False, path=None,
-                              figsize=(8,6), format='png', num_subjs=None, **kwargs):
+                              figsize=(8, 6), format='png', num_subjs=None, **kwargs):
     """Plot the posterior predictive distribution of a kabuki hierarchical model.
 
     :Arguments:
@@ -550,10 +558,10 @@ def plot_posterior_predictive(model, plot_func=None, required_method='pdf', colu
         for subj_i, (node_name, bottom_node) in enumerate(nodes.iterrows()):
             i += 1
             if not hasattr(bottom_node['node'], required_method):
-                continue # skip nodes that do not define the required_method
+                continue  # skip nodes that do not define the required_method
 
-            nrows = num_subjs or len(nodes)/columns     
-            ax = fig.add_subplot(np.ceil(nrows), columns, subj_i+1)
+            nrows = num_subjs or len(nodes) / columns
+            ax = fig.add_subplot(np.ceil(nrows), columns, subj_i + 1)
             if 'subj_idx' in bottom_node:
                 ax.set_title(str(bottom_node['subj_idx']))
 
@@ -571,6 +579,7 @@ def plot_posterior_predictive(model, plot_func=None, required_method='pdf', colu
                 format = [format]
             [fig.savefig('%s.%s' % (os.path.join(path, fname), x), format=x) for x in format]
 
+
 def geweke_problems(model, fname=None, **kwargs):
     """
     return a list of nodes who were detected as problemtic according to the geweke test
@@ -580,15 +589,15 @@ def geweke_problems(model, fname=None, **kwargs):
         kwargs : keywords argument passed to the geweke function
     """
 
-    #search for geweke problems
+    # search for geweke problems
     g = pm.geweke(model.mc)
     problems = []
     for node, output in g.items():
-        values = np.array(output)[:,1]
+        values = np.array(output)[:, 1]
         if np.any(np.abs(values) > 2):
             problems.append(node)
 
-    #write results to file if needed
+    # write results to file if needed
     if fname is not None:
         with open(fname, 'w') as f:
             for node in problems:

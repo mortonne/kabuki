@@ -1,5 +1,3 @@
-
-
 from copy import deepcopy
 
 import numpy as np
@@ -51,7 +49,7 @@ def _add_noise(params, check_valid_func=None, bounds=None, noise=.1, exclude_par
         if param in bounds:
             while True:
                 sampled_value = normal_rand(value, param_noise)
-                if sampled_value >= bounds[param][0] and sampled_value <= bounds[param][1]:
+                if bounds[param][0] <= sampled_value <= bounds[param][1]:
                     return sampled_value
         else:
             return normal_rand(value, param_noise)
@@ -62,10 +60,9 @@ def _add_noise(params, check_valid_func=None, bounds=None, noise=.1, exclude_par
     if check_valid_func is None:
         check_valid_func = lambda **params: True
 
-
     # Sample parameters until accepted
     original_params = deepcopy(params)
-    params_noise= deepcopy(params)
+    params_nois e = deepcopy(params)
     while True:
         params = deepcopy(original_params)
 
@@ -92,6 +89,7 @@ def _add_noise(params, check_valid_func=None, bounds=None, noise=.1, exclude_par
         # return params
         if valid:
             return params
+
 
 def gen_rand_data(gen_func, params, size=50, subjs=1, subj_noise=.1, exclude_params=(), share_noise=(),
                   column_name='data', check_valid_func=None, bounds=None, seed=None, generate_data=True):
@@ -143,8 +141,8 @@ def gen_rand_data(gen_func, params, size=50, subjs=1, subj_noise=.1, exclude_par
 
     """
 
-    #The value of generate_data affects the parameters generation
-    #so in the mean time we fix that, by completely ignoring the argument.
+    # The value of generate_data affects the parameters generation
+    # so in the mean time we fix that, by completely ignoring the argument.
     generate_data = True
 
     # Check if only dict of params was passed, i.e. no conditions
@@ -159,7 +157,7 @@ def gen_rand_data(gen_func, params, size=50, subjs=1, subj_noise=.1, exclude_par
 
     data = []
     for subj_idx in range(subjs):
-        #if it is a group model add noise to the parameters
+        # if it is a group model add noise to the parameters
         if subjs > 1:
             # Sample subject parameters from a normal around the specified parameters
             subj_params = _add_noise(params, noise=subj_noise, share_noise=share_noise,
@@ -169,13 +167,13 @@ def gen_rand_data(gen_func, params, size=50, subjs=1, subj_noise=.1, exclude_par
         else:
             subj_params = params.copy()
 
-        #sample for each condition
+        # sample for each condition
         for condition, params_cur in subj_params.items():
             final_params_set[condition].append(params_cur)
             if generate_data:
                 samples_from_dist = gen_func(size=size, **params_cur)
             else:
-                samples_from_dist = np.empty(size,dtype=np.float)
+                samples_from_dist = np.empty(size, dtype=np.float)
                 samples_from_dist[:] = np.nan
 
             samples_from_dist = pd.DataFrame(samples_from_dist)

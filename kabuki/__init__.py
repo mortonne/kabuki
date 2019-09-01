@@ -8,12 +8,17 @@ from . import generate
 __version__ = '0.6.2'
 
 try:
-    from IPython.core.debugger import Tracer; debug_here = Tracer()
+    from IPython.core.debugger import Tracer;
+
+    debug_here = Tracer()
 except:
     try:
-        from IPython.Debugger import Tracer; debug_here = Tracer()
+        from IPython.Debugger import Tracer;
+
+        debug_here = Tracer()
     except:
-        def debug_here(): pass
+        def debug_here():
+            pass
 
 try:
     from collections import OrderedDict

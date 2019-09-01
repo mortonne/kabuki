@@ -5,9 +5,11 @@ import unittest
 from collections import OrderedDict
 from kabuki.generate import gen_rand_data, _add_noise
 
+
 def gen_func_df(size=100, loc=0, scale=1):
     data = np.random.normal(loc=loc, scale=scale, size=size)
     return pd.DataFrame(data, columns=['data'])
+
 
 class TestGenerate(unittest.TestCase):
     def runTest(self):
@@ -38,7 +40,8 @@ class TestGenerate(unittest.TestCase):
             assert (bound_params['scale'] > 0) and (bound_params['scale'] < 2)
 
         # test whether valid_func works
-        check_valid_func = lambda **params: (params['loc'] > -1) and (params['loc'] < 1) and (params['scale'] > 0) and (params['scale'] < 2)
+        check_valid_func = lambda **params: (params['loc'] > -1) and (params['loc'] < 1) and (params['scale'] > 0) and (
+                params['scale'] < 2)
         for i in range(10):
             bound_params = _add_noise({'test': params}, check_valid_func=check_valid_func, noise=3)['test']
             assert (bound_params['loc'] > -1) and (bound_params['loc'] < 1)
@@ -66,7 +69,7 @@ class TestGenerate(unittest.TestCase):
         np.testing.assert_array_equal(np.unique(data['subj_idx']), list(range(subjs)))
 
         # test for correct length
-        np.testing.assert_array_equal(len(data), subjs*size)
+        np.testing.assert_array_equal(len(data), subjs * size)
 
         # generate truth
         np.random.seed(seed)
@@ -91,7 +94,7 @@ class TestGenerate(unittest.TestCase):
         np.testing.assert_array_equal(np.unique(data['subj_idx']), list(range(subjs)))
 
         # test for correct length
-        np.testing.assert_array_equal(len(data), subjs*size)
+        np.testing.assert_array_equal(len(data), subjs * size)
 
         # generate truth
         np.random.seed(seed)
@@ -100,7 +103,6 @@ class TestGenerate(unittest.TestCase):
             truth = gen_func_df(size=size, **new_params)
             np.testing.assert_array_equal(data[data['subj_idx'] == i]['data'], truth['data'])
             self.assertEqual(params_subjs[i], new_params)
-
 
     def test_multiple_cond_no_subj(self):
         size = 100
@@ -114,7 +116,7 @@ class TestGenerate(unittest.TestCase):
         self.assertEqual(list(subj_params.keys()), ['cond1', 'cond2'])
 
         # test for correct length
-        np.testing.assert_array_equal(len(data), 2*size)
+        np.testing.assert_array_equal(len(data), 2 * size)
 
         # generate truth
         np.random.seed(31337)
@@ -123,7 +125,6 @@ class TestGenerate(unittest.TestCase):
 
         truth = gen_func_df(size=100, **params['cond2'])
         np.testing.assert_array_equal(data[data['condition'] == 'cond2']['data'], truth['data'])
-
 
     def test_column_name(self):
         params = OrderedDict([('loc', 0), ('scale', 1)])

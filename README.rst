@@ -89,21 +89,21 @@ want to estimate the mean and variance:
 
 ::
 
-    from kabuki import Hierarchical, Knode
-    import pymc
+	from kabuki import Hierarchical, Knode
+	import pymc
 
-    class MyModel(Hierarchical):
-        # We have to overload the create_knodes() method. It is
-        # expected to return a list of knodes.
-        def create_knodes(self):
+	class MyModel(Hierarchical):
+		# We have to overload the create_knodes() method. It is
+		# expected to return a list of knodes.
+		def create_knodes(self):
 
-	    mu_g = Knode(pymc.Uniform, 'mu_g', lower=-5, upper=5, depends=self.depends['mu'])
+		mu_g = Knode(pymc.Uniform, 'mu_g', lower=-5, upper=5, depends=self.depends['mu'])
 
-            mu_subj = Knode(pymc.Normal, 'mu_subj', mu=mu_g, tau=1, depends=('subj_idx',), subj=True)
+			mu_subj = Knode(pymc.Normal, 'mu_subj', mu=mu_g, tau=1, depends=('subj_idx',), subj=True)
 
-            like = Knode(pymc.Normal, 'like', mu=mu_subj, tau=1, col_name='data', observed=True)
+			like = Knode(pymc.Normal, 'like', mu=mu_subj, tau=1, col_name='data', observed=True)
 
-            return [mu_g, mu_subj, like]
+			return [mu_g, mu_subj, like]
 
 OK, what's going on here?
 
@@ -165,14 +165,14 @@ An example data file in csv might looks this:
 
 ::
 
-    subj_idx, data, condition
-    1,        0.3,  'low'
-    1,        -0.25,'low'
-    1,        1.3,  'high'
-    1,        0.5.1.dev,  'high'
-    [...]
-    24,       0.8,  'low'
-    24,       0.1,  'high'
+	subj_idx, data, condition
+	1,        0.3,  'low'
+	1,        -0.25,'low'
+	1,        1.3,  'high'
+	1,        0.5.1.dev,  'high'
+	[...]
+	24,       0.8,  'low'
+	24,       0.1,  'high'
 
 Here is how you would create a model tailored around this data set,
 set the parameters to their MAP, sample and print some output statistics:

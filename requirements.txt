@@ -1,3 +1,6 @@
+emcee
+matplotlib
+IPython
 scipy
 numpy
 pandas

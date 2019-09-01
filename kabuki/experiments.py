@@ -5,6 +5,7 @@ import os.path
 from copy import deepcopy
 import matplotlib.pyplot as plt
 
+
 def sort_dict(d):
     from operator import itemgetter
     return sorted(iter(d.items()), key=itemgetter(1))
@@ -33,7 +34,6 @@ def _parse_experiment(experiment):
         kwargs = deepcopy(experiment['kwargs'])
     else:
         kwargs = {}
-
 
     if 'name' in experiment:
         name = experiment['name']
@@ -89,7 +89,7 @@ def run_experiment(experiment, db='sqlite', samples=10000, burn=5000, thin=3, su
 
     stats = kabuki.analyze.gen_stats(m.mc.stats())
 
-    with open('%s/stats.txt'%name, 'w') as f:
+    with open('%s/stats.txt' % name, 'w') as f:
         f.write("%f\n" % m.mc.dic)
         f.write(stats)
 
@@ -142,6 +142,7 @@ def load_experiment(experiment, dbname='traces.db', db='sqlite'):
     experiment['model'] = load_model(experiment, db=db, dbname=dbname)
     return experiment
 
+
 def load_model(experiment, db='sqlite', dbname='traces.db'):
     data, model_class, kwargs, name = _parse_experiment(experiment)
     m = model_class(data, **kwargs)
@@ -150,12 +151,14 @@ def load_model(experiment, db='sqlite', dbname='traces.db'):
 
     return m
 
+
 def load_ppc(experiment):
     import pandas as pd
     data, model_class, kwargs, name = _parse_experiment(experiment)
     post_pred = pd.read_csv(os.path.join(name, 'post_pred.csv'))
 
     return post_pred
+
 
 def load_ppcs(experiments):
     import pandas as pd
@@ -169,8 +172,9 @@ def load_ppcs(experiments):
 
     model_names = [_parse_experiment(experiment)[-1] for experiment in experiments]
     print(model_names)
-    return (model_names, post_preds)
-    #return pd.concat(post_preds, keys=model_names, names=['model'])
+    return model_names, post_preds
+    # return pd.concat(post_preds, keys=model_names, names=['model'])
+
 
 def analyze_experiment(experiment, plot_groups=True, plot_traces=True, plot_post_pred=True, ppc=True, stats=None):
     """Analyze a single experiment. Writes output statitics and various plots into a subdirectory.
@@ -198,7 +202,7 @@ def analyze_experiment(experiment, plot_groups=True, plot_traces=True, plot_post
     if 'model' in experiment:
         # Model already loaded, use it
         model = experiment['model']
-    else: # Load it
+    else:  # Load it
         model = load_model(experiment)
 
     print("Analyzing model: %s" % name)
@@ -210,7 +214,8 @@ def analyze_experiment(experiment, plot_groups=True, plot_traces=True, plot_post
 
     if plot_post_pred:
         print("Plotting posterior predictive")
-        kabuki.analyze.plot_posterior_predictive(model, np.linspace(-1.2, 1.2, 80), savefig=True, path=name, columns=7, figsize=(18,18))
+        kabuki.analyze.plot_posterior_predictive(model, np.linspace(-1.2, 1.2, 80), savefig=True, path=name, columns=7,
+                                                 figsize=(18, 18))
 
     if ppc:
         ppc = kabuki.analyze.post_pred_check(model, stats=stats)
@@ -267,7 +272,8 @@ def analyze_experiments(experiments, mpi=False, plot_dic=True, **kwargs):
 
     return results
 
-if __name__=='__main__':
+
+if __name__ == '__main__':
     from copy import copy
 
     # Example, requires HDDM
@@ -278,13 +284,15 @@ if __name__=='__main__':
     params = {'cond1': copy(params_single), 'cond2': copy(params_single)}
     params['cond2']['v'] = 0
     data, subj_params = kabuki.generate.gen_rand_data(hddm.likelihoods.Wfpt,
-                                         params=params, samples=100, subjs=10, column_name='rt')[0]
+                                                      params=params, samples=100, subjs=10, column_name='rt')[0]
 
     # Create different models to test our various hypotheses.
     experiments = [
-                   {'name': 'baseline', 'data': data, 'model_type': 'hddm.HDDM', 'kwargs': {'depends_on': {}}},
-                   {'name': 'condition_influences_drift', 'data': data, 'model_type': 'hddm.HDDM', 'kwargs': {'depends_on': {'v': 'condition'}}},
-                   {'name': 'condition_influences_threshold', 'data': data, 'model_type': 'hddm.HDDM', 'kwargs': {'depends_on': {'a': 'condition'}}}]
+        {'name': 'baseline', 'data': data, 'model_type': 'hddm.HDDM', 'kwargs': {'depends_on': {}}},
+        {'name': 'condition_influences_drift', 'data': data, 'model_type': 'hddm.HDDM',
+         'kwargs': {'depends_on': {'v': 'condition'}}},
+        {'name': 'condition_influences_threshold', 'data': data, 'model_type': 'hddm.HDDM',
+         'kwargs': {'depends_on': {'a': 'condition'}}}]
 
     print("Running experiments...")
     run_experiments(experiments)
@@ -293,5 +301,3 @@ if __name__=='__main__':
     analyze_experiments(experiments, ppc=False)
 
     print("Done! Check the newly created subdirectories.")
-
-

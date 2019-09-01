@@ -5,7 +5,6 @@ from numpy.random import randn, rand
 from numpy import array, sqrt
 
 
-
 class kNormalNormal(pm.Gibbs):
     """
     Step method for Normal Prior with Normal likelihood.
@@ -27,12 +26,12 @@ class kNormalNormal(pm.Gibbs):
         self.tau_0 = stochastic.parents['tau']
         self.tau_node = list(stochastic.extended_children)[0].parents['tau']
 
-        #total number of samples
+        # total number of samples
         self.total_n = sum(array([len(x.value.flatten()) for x in self.children]))
 
-        self.b = [] #holds the b parameters
-        self.n_of_b = [] #holds the number of children of each b
-        self.shift = False #is the model centered or shifted
+        self.b = []  # holds the b parameters
+        self.n_of_b = []  # holds the number of children of each b
+        self.shift = False  # is the model centered or shifted
         for child in self.children:
             parent = child.parents['mu']
             if parent is stochastic:
@@ -47,7 +46,7 @@ class kNormalNormal(pm.Gibbs):
 
     def step(self):
 
-        #get value of mu_0, tau_node and tau_0
+        # get value of mu_0, tau_node and tau_0
         if isinstance(self.mu_0, pm.Node):
             mu_0_val = self.mu_0.value
         else:
@@ -63,18 +62,19 @@ class kNormalNormal(pm.Gibbs):
         else:
             tau_0 = self.tau_0
 
-        #compute mu_prime and tau_prime
-        tau_prime = tau_0 + self.total_n*tau_node
+        # compute mu_prime and tau_prime
+        tau_prime = tau_0 + self.total_n * tau_node
         sum_child_values = np.sum([np.sum(x.value.flatten()) for x in self.children])
         if self.shift:
             xxx = sum([self.n_of_b[i] * self.b[i].value for i in range(self.total_b)])
-            temp_mu =  tau_node * (sum_child_values   - xxx)
+            temp_mu = tau_node * (sum_child_values - xxx)
         else:
-            temp_mu = tau_node*sum_child_values
+            temp_mu = tau_node * sum_child_values
         mu_prime = ((tau_0 * mu_0_val) + temp_mu) / tau_prime
 
-        #sample
-        self.stochastic.value = np.random.randn()/np.sqrt(tau_prime) + mu_prime
+        # sample
+        self.stochastic.value = np.random.randn() / np.sqrt(tau_prime) + mu_prime
+
 
 class PriorNormalstd(pm.Gibbs):
     """
@@ -97,35 +97,37 @@ class PriorNormalstd(pm.Gibbs):
         self.mu_nodes = np.unique([x.parents['mu'] for x in self.children])
         self.fail = 0
 
-        self.groups = [None]*len(self.mu_nodes)
+        self.groups = [None] * len(self.mu_nodes)
         for i, mu in enumerate(self.mu_nodes):
             self.groups[i] = [x for x in self.children if x.parents['mu'] == mu]
 
     def step(self):
 
-        #compute beta
+        # compute beta
         self.beta = 0
         for i, mu in enumerate(self.mu_nodes):
             if isinstance(mu, pm.Node):
                 mu_val = mu.value
             else:
                 mu_val = mu
-            self.beta  += sum([sum((x.value.flatten() - mu_val)**2) for x in self.groups[i]])
+            self.beta += sum([sum((x.value.flatten() - mu_val) ** 2) for x in self.groups[i]])
         self.beta /= 2.
 
         reject = True
         iter = 0
-        while (reject) and (iter < self.maxiter):
-            #sample tau using gamma distrbution
-            var_proposal = 1./ np.random.gamma(self.alpha, 1./self.beta)
+        while reject and (iter < self.maxiter):
+            # sample tau using gamma distrbution
+            var_proposal = 1. / np.random.gamma(self.alpha, 1. / self.beta)
             proposal = np.sqrt(var_proposal)
-            reject =  self.is_rejected(proposal)
+            reject = self.is_rejected(proposal)
             iter += 1
 
         if reject:
             self.fail += 1
         else:
             self.stochastic.value = proposal
+
+
 #        kabuki.debug_here()
 
 class UniformPriorNormalstd(PriorNormalstd):
@@ -141,13 +143,13 @@ class UniformPriorNormalstd(PriorNormalstd):
         self.lower = stochastic.parents['lower']
         self.upper = stochastic.parents['upper']
 
-
     def is_rejected(self, proposal):
-        if (self.lower < proposal < self.upper):
+        if self.lower < proposal < self.upper:
             reject = False
         else:
             reject = True
         return reject
+
 
 class UninformativePriorNormalstd(PriorNormalstd):
     """
@@ -176,16 +178,14 @@ class MetropolisAlpha(pm.Metropolis):
         self.loc = loc
         self.alpha = stochastic
 
-        #set self.children
+        # set self.children
         for beta in self.betas:
             self.children.update(beta.extended_children)
-
 
     def _get_logp_plus_loglike(self):
         return pm.logp_of_set(self.children)
 
-    logp_plus_loglike = property(fget = _get_logp_plus_loglike)
-
+    logp_plus_loglike = property(fget=_get_logp_plus_loglike)
 
     def step(self):
         """
@@ -222,14 +222,13 @@ class MetropolisAlpha(pm.Metropolis):
             # Increment rejected count
             self.rejected += 1
         else:
-            #update all the other variables
+            # update all the other variables
             for node in self.loc:
-                node.value  = node.value * self.alpha_ratio
+                node.value = node.value * self.alpha_ratio
             self.scale.value = self.scale.value * np.abs(self.alpha_ratio)
 
             # Increment accepted count
             self.accepted += 1
-
 
     def propose(self):
         """
@@ -237,9 +236,9 @@ class MetropolisAlpha(pm.Metropolis):
         if self.proposal_distribution is "Normal" (i.e. no proposal specified).
         """
 
-        last_value  = self.alpha.value
+        last_value = self.alpha.value
         self.alpha.value = np.random.normal(self.alpha.value, self.adaptive_scale_factor * self.proposal_sd,
-                                        size=self.alpha.value.shape)
+                                            size=self.alpha.value.shape)
         self.alpha_ratio = self.alpha.value / last_value
         for beta in self.betas:
             beta.value = beta.value * self.alpha_ratio
@@ -250,7 +249,6 @@ class MetropolisAlpha(pm.Metropolis):
         self.stochastic.revert()
         for beta in self.betas:
             beta.revert()
-
 
 
 class SPXcentered(pm.StepMethod):
@@ -276,10 +274,10 @@ class SPXcentered(pm.StepMethod):
 
         pm.StepMethod.__init__(self, [scale] + loc + list(self.beta), *args, **kwargs)
 
-        #set alpha
+        # set alpha
         self.alpha = pm.Uninformative('alpha', value=1., trace=False, plot=False)
 
-        #assign default Metropolis step method if needed
+        # assign default Metropolis step method if needed
         if loc_step_method is None:
             loc_step_method = pm.Metropolis
         if scale_step_method is None:
@@ -294,7 +292,7 @@ class SPXcentered(pm.StepMethod):
         if beta_step_method_args is None:
             beta_step_method_args = {}
 
-        #set step methods
+        # set step methods
         self.loc_steps = [loc_step_method(node, **loc_step_method_args) for node in self.loc]
         self.scale_step = scale_step_method(scale, **scale_step_method_args)
         self.beta_steps = [beta_step_method(node, **beta_step_method_args) for node in self.beta]
@@ -302,27 +300,27 @@ class SPXcentered(pm.StepMethod):
 
     def step(self):
 
-        #take one step for all the nodes
+        # take one step for all the nodes
         [x.step() for x in self.beta_steps]
         [x.step() for x in self.loc_steps]
         self.scale_step.step()
 
-        #take a step for alpha
+        # take a step for alpha
         self.alpha_step.step()
 
     def tune(self, verbose):
-        #tune scale
+        # tune scale
         tuning = self.scale_step.tune()
 
-        #tune beta
+        # tune beta
         for step in self.beta_steps:
             tuning = tuning | step.tune()
 
-        #tune loc
+        # tune loc
         for step in self.loc_steps:
             tuning = tuning | step.tune()
 
-        #tune alpha
+        # tune alpha
         tuning = tuning | self.alpha_step.tune()
 
         return tuning
@@ -332,8 +330,9 @@ class SliceStep(pm.Gibbs):
     """
     simple slice sampler
     """
-    def __init__(self, stochastic, width = 2, maxiter = 200, left = None,
-                 verbose = -1, *args, **kwargs):
+
+    def __init__(self, stochastic, width=2, maxiter=200, left=None,
+                 verbose=-1, *args, **kwargs):
         """
         Input:
             stochastic - stochastic node
@@ -351,15 +350,14 @@ class SliceStep(pm.Gibbs):
         stoch = self.stochastic
         value = stoch.value
 
-        #sample vertical level
+        # sample vertical level
         z = self.logp_plus_loglike - np.random.exponential()
 
-        if self.verbose>2:
+        if self.verbose > 2:
             print(self._id + ' current value: %.3f' % value)
             print(self._id + ' sampled vertical level ' + repr(z))
 
-
-        #position an interval at random starting position around the current value
+        # position an interval at random starting position around the current value
         r = self.width * np.random.rand()
         xr = value + r
         if self.left is not None:
@@ -367,12 +365,11 @@ class SliceStep(pm.Gibbs):
         else:
             xl = xr - self.width
 
-
-        if self.verbose>2:
+        if self.verbose > 2:
             print('initial interval [%.3f, %.3f]' % (xl, xr))
 
         if self.left is None:
-            #step out to the left
+            # step out to the left
             iter = 0
             stoch.value = xl
             while (self.get_logp() >= z) and (iter < self.maxiter):
@@ -383,42 +380,41 @@ class SliceStep(pm.Gibbs):
             assert iter < self.maxiter, "Step-out procedure failed"
             self.neval += iter
 
-            if self.verbose>2:
+            if self.verbose > 2:
                 print('after %d iteration interval is [%.3f, %.3f]' % (iter, xl, xr))
 
-        #step out to the right
+        # step out to the right
         iter = 0
         stoch.value = xr
         while (self.get_logp() >= z) and (iter < self.maxiter):
-                xr += self.width
-                stoch.value = xr
-                iter += 1
+            xr += self.width
+            stoch.value = xr
+            iter += 1
 
         assert iter < self.maxiter, "Step-out procedure failed"
         self.neval += iter
-        if self.verbose>2:
+        if self.verbose > 2:
             print('after %d iteration interval is [%.3f, %.3f]' % (iter, xl, xr))
 
-        #draw a new point from the interval [xl, xr].
-        xp = rand()*(xr-xl) + xl
+        # draw a new point from the interval [xl, xr].
+        xp = rand() * (xr - xl) + xl
         stoch.value = xp
 
-        #if the point is outside the interval than shrink it and draw again
+        # if the point is outside the interval than shrink it and draw again
         iter = 0
-        while(self.get_logp() < z) and (iter < self.maxiter):
-            if (xp > value):
+        while (self.get_logp() < z) and (iter < self.maxiter):
+            if xp > value:
                 xr = xp
             else:
                 xl = xp
-            xp = rand() * (xr-xl) + xl #draw again
+            xp = rand() * (xr - xl) + xl  # draw again
             stoch.value = xp
             iter += 1
 
         assert iter < self.maxiter, "Shrink-in procedure failed."
         self.neval += iter
-        if self.verbose>2:
+        if self.verbose > 2:
             print('after %d iteration found new value: %.3f' % (iter, xp))
-
 
     def get_logp(self):
         try:

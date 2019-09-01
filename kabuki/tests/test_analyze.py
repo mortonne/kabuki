@@ -1,9 +1,9 @@
-
 import numpy as np
 import unittest
 import kabuki.analyze as ka
 from matplotlib.pyplot import close
 from . import utils
+
 
 class TestAnalyzeBreakdown(unittest.TestCase):
     """
@@ -15,10 +15,10 @@ class TestAnalyzeBreakdown(unittest.TestCase):
     @classmethod
     def setUpClass(self):
 
-        #load models
+        # load models
         self.models, _ = utils.create_test_models()
 
-        #run models
+        # run models
         utils.sample_from_models(self.models, n_iter=200)
 
     def runTest(self):
@@ -63,7 +63,7 @@ class TestAnalyzeBreakdown(unittest.TestCase):
                 if model.depends:
                     (name, cond) = list(model.depends.items())[0]
                     tags = list(model.nodes_db[name].group_nodes.keys())[:2]
-                ka.group_cond_diff(model,name, *tags)
+                ka.group_cond_diff(model, name, *tags)
 
     @unittest.skip("Fails because of pymc likelihoods converting DataFrames to numpy arrays.")
     def test_post_pred_check(self):
@@ -72,4 +72,4 @@ class TestAnalyzeBreakdown(unittest.TestCase):
 
     def test_plot_posterior_predictive(self):
         for model in self.models:
-            ka.plot_posterior_predictive(model, value_range=np.arange(-2,2,10), samples=10)
+            ka.plot_posterior_predictive(model, value_range=np.arange(-2, 2, 10), samples=10)
